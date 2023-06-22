@@ -10,8 +10,8 @@ import {
 import {getLivroWithoutProperty,setPropertyOnDoc} from './db.js'
 
 
-async function removeFromEv(id) {
-    await evBuscaById(id)
+async function removeFromEv(livro) {
+    await evBuscaById(livro.id_livro)
     let count = await countElements(`.acervo-item`)
     console.log(`Itens encontrados: ${count}`)
     if(count>0){
@@ -19,9 +19,12 @@ async function removeFromEv(id) {
         await clickOnSelector('.action-checked')
         await sleep(0.5)
         await acceptAlert()
+        await setPropertyOnDoc(livro,'removedFromEv',true)
         return true
     }
     if(count===0){
+        await setPropertyOnDoc(livro,'removedFromEv',true)
+        await setPropertyOnDoc(livro,'alreadyRemovedFromEv',true)
         return true
     }
 
@@ -36,23 +39,15 @@ async function startHandler(n= 1,maxN= 10){
     if (livro.length===0) {
         return 'Sem livros para remover';
     } else {
-        let _ok = false
         console.log(`Starting removal of id: ${livro[0].id_livro}`)
         await sleep(1)
-        _ok = await removeFromEv(livro[0].id_livro)
-        console.log(`Livro fora da EV: ${_ok}`)
-        if(_ok){
-            console.log("Removed from ev... updating on DB. ")
-            await setPropertyOnDoc(livro[0],'removedFromEv',true)
-        }
+        await removeFromEv(livro[0])
         return startHandler(n+1, maxN)
     }
 }
 
 
-
-
-startHandler(1, 10)
+startHandler(1, 7000)
 
 
 
