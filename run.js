@@ -4,10 +4,10 @@ import {
     acceptAlert,
     sleep,
     closeDriver,
-    countElements,
+    countElements
 } from './common.js'
 
-import {getLivroWithoutProperty,setPropertyOnDoc} from './db.js'
+import {countLivrosWithoutProperty, getLivroWithoutProperty, setPropertyOnDoc} from './db.js'
 
 
 async function removeFromEv(livro) {
@@ -32,11 +32,15 @@ async function removeFromEv(livro) {
 
 
 async function startHandler(n= 1,maxN= 10){
-    if(n>maxN) return true;
+    if(n>maxN){
+        closeDriver()
+        return true;
+    }
     console.log(`handler ${n} / ${maxN}`)
 
     let livro = await getLivroWithoutProperty('removedFromEv')
     if (livro.length===0) {
+        closeDriver()
         return 'Sem livros para remover';
     } else {
         console.log(`Starting removal of id: ${livro[0].id_livro}`)
@@ -47,7 +51,14 @@ async function startHandler(n= 1,maxN= 10){
 }
 
 
-startHandler(1, 7000)
 
+
+let total = await countLivrosWithoutProperty('removedFromEv')
+if(total>0){
+    let queue_max = 2000
+    startHandler(1, total > queue_max ? queue_max:total)
+} else {
+    console.log(`There is no books without the tag 'removedFromEv'`)
+}
 
 
