@@ -8,6 +8,7 @@ let profileDirectory='./profiles/chrome1'
 export const driver = () => {
     const options = new chrome.Options();
     options.addArguments('--user-data-dir='+profileDirectory);
+    options.addArguments('--headless');
 
     if(_driver) return _driver;
     console.log(`Driver does not exist.. instancing new driver ...`)
@@ -104,14 +105,6 @@ export const countElements = async(selector) =>{
         return 0;
     }
 }
-
-
-
-export const functionName = async(functionParam) =>{
-}
-
-
-
 
 
 
