@@ -29,8 +29,8 @@ export async function getLivroWithoutProperty(propertyName, propertyValue=false)
     }
 }
 
-export async function setPropertyOnDoc(docData, propertyName, propertyValue) {
-    const endpoint = `/local_mysql_expedicao/${docData._id}`;
+export async function setPropertyOnDoc(docData, propertyName, propertyValue, table='local_mysql_expedicao') {
+    const endpoint = `/${table}/${docData._id}`;
 
     try {
         const response = await instance.get(endpoint);
@@ -65,6 +65,44 @@ export async function countLivrosWithoutProperty(propertyName, propertyValue = f
     } catch (error) {
         console.error(error);
         return 0; // Return 0 if an error occurs
+    }
+}
+
+export async function saveDoc(data, table) {
+    const endpoint = `/${table}`;
+    try {
+        const response = await instance.post(endpoint, data);
+        console.log('Document saved successfully:', response.data);
+    } catch (error) {
+        console.error('An error occurred while saving the document:', error);
+    }
+}
+
+export async function updateOrSaveDoc(data, table,prop='id',value='') {
+    value = value ? value : data.id
+    const endpoint = `/${table}/_find`;
+    const requestBody = {
+        selector: {
+            [prop]: value,
+        },
+    };
+
+    try {
+        const response = await instance.post(endpoint, requestBody);
+        const existingDoc = response.data.docs[0];
+
+        if (existingDoc) {
+            // Document with matching id found, update it with additional data
+            const updatedDoc = { ...existingDoc, ...data };
+            await saveDoc(updatedDoc, table);
+            console.log('Document updated successfully:', updatedDoc);
+        } else {
+            // Document with matching id not found, save a new document
+            await saveDoc(data, table);
+            console.log('New document saved successfully:', data);
+        }
+    } catch (error) {
+        console.error('An error occurred while updating or saving the document:', error);
     }
 }
 

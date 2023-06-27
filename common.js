@@ -1,4 +1,4 @@
-import { Builder, By, Key, until } from 'selenium-webdriver';
+import { Builder, By, until } from 'selenium-webdriver';
 import chrome from 'selenium-webdriver/chrome.js'
 
 
@@ -8,7 +8,7 @@ let profileDirectory='./profiles/chrome1'
 export const driver = () => {
     const options = new chrome.Options();
     options.addArguments('--user-data-dir='+profileDirectory);
-    options.addArguments('--headless');
+    // options.addArguments('--headless');
 
     if(_driver) return _driver;
     console.log(`Driver does not exist.. instancing new driver ...`)
@@ -77,6 +77,17 @@ export const clickOnSelector = async(selector) =>{
     console.log(`Clicked on: ${selector}`);
 }
 
+
+export const sendKeysToInput = async (selector, keys) => {
+    try {
+        console.log(`Sending Keys '${keys}' to input`);
+        const inputElement = await waitFor(selector);
+        await inputElement.sendKeys(keys);
+    } catch (error) {
+        console.error('An error occurred while sending keys to input:', error);
+    }
+};
+
 export const acceptAlert = async () => {
     await sleep(1);
     try {
@@ -106,7 +117,27 @@ export const countElements = async(selector) =>{
     }
 }
 
+export const getElements = async(selector) =>{
+    try {
+        return (await driver().findElements(By.css(selector)));
+    } catch (error) {
+        console.error('An error occurred while getting elements:', error);
+        return [];
+    }
+}
 
+export const getProperties = async (selector, prop = 'innerHTML') => {
+    try {
+        const elements = await driver().findElements(By.css(selector));
+        const propertyValues = await Promise.all(
+            elements.map(async (element) => await element.getProperty(prop))
+        );
+        return propertyValues.map((value) => value.toString());
+    } catch (error) {
+        console.error('An error occurred while getting property:', error);
+        return [];
+    }
+};
 
 
 // Estante virtual
@@ -115,6 +146,55 @@ export const evBuscaById = async(idSearch) =>{
     let urlBusca = 'https://www.estantevirtual.com.br/acervo?sub=listar&ativos=0&alvo=descr&pchave='+idSearch
     await get(urlBusca)
 }
+
+export const idFromText = text=>{
+    return text.match(/ID \d+/g)[0].replace('ID ','')
+}
+
+export const evPgPedido = async(idPedidoEv) =>{
+    console.log(`Getting order page: ${idPedidoEv}`);
+    const urlPedidoEv = 'https://livreiro.estantevirtual.com.br/v2/vendas/'+idPedidoEv
+    await get(urlPedidoEv)
+}
+export const evPgVendas = async() =>{
+    console.log(`Getting sales page: ${''}`);
+    const urlVendas = 'https://livreiro.estantevirtual.com.br/vendas/?termo=&periodo=total&status=standby&forma_pagamento=todas&carrier=&envio=&rows_per_page=100'
+    await get(urlVendas)
+}
+
+
+export const evPegaInfosPedido = async(idPedidoEv) => {
+    await evPgPedido(''+idPedidoEv)
+
+    const pedido = ''+idPedidoEv
+    const qtde = await countElements('.sale-details__summary-product-title')
+    const descricoes_livros = (await getProperties('.order-sale__data-description-text','innerHTML'))
+    const ids_livros = descricoes_livros.map(idFromText)
+    const shippingInfo = (await getProperties('.shipping-info','innerHTML'))[0]
+    const frete = (await getProperties('.sale-details__summary-freight > .col-xs-3','innerHTML'))[0].match(/\d+[,]?\d+/)[0].replace(',','.')
+    const endereco = shippingInfo.split('</p>')[2].replaceAll('\n','').replaceAll('<p>','').replaceAll('  ','')
+    const nome = (await getProperties('.user-info__buyer','innerHTML'))[0]
+    const userInfo = (await getProperties('.user-info','innerHTML'))[0]
+    const cpf = userInfo.split('CPF: ')[1].split(' ')[0]
+    const envio = (await getProperties('.shipping-type-info span','innerHTML'))[0].match(/\w+/)[0]
+
+    // ... mais alguma coisa??
+
+    return {ids_livros, qtde, cpf, nome, frete, endereco, envio, pedido}
+}
+
+
+export const evListaPedidos = async function(){
+    return  (await getProperties('.order','innerHTML')).map(e=>e.match(/\d+/)[0])
+
+}
+
+
+export const evSetTrackingCode = async function (code) {
+    sendKeysToInput('#tracking_code',code)
+    // clickOnSelector('#tracking_code_btn')
+}
+
 
 
 
