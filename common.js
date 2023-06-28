@@ -59,7 +59,13 @@ export const waitAlert = async() => {
 
 
 export const get = async(url) => {
-    return await driver().get(url)
+    let r = await driver().get(url)
+
+    // test for 'errors'
+    if((await driver().getCurrentUrl()).includes('login')){
+        console.log('The Browser is probably asking for login credentials')
+    }
+    return r
 }
 
 export const sleep = async(seconds) => {
@@ -156,6 +162,11 @@ export const evPgPedido = async(idPedidoEv) =>{
     const urlPedidoEv = 'https://livreiro.estantevirtual.com.br/v2/vendas/'+idPedidoEv
     await get(urlPedidoEv)
 }
+
+export const evPgCadastro = async() =>{
+    const url = 'https://www.estantevirtual.com.br/acervo/editar'
+    await get(url)
+}
 export const evPgVendas = async() =>{
     console.log(`Getting sales page: ${''}`);
     const urlVendas = 'https://livreiro.estantevirtual.com.br/vendas/?termo=&periodo=total&status=standby&forma_pagamento=todas&carrier=&envio=&rows_per_page=100'
@@ -194,8 +205,6 @@ export const evSetTrackingCode = async function (code) {
     sendKeysToInput('#tracking_code',code)
     // clickOnSelector('#tracking_code_btn')
 }
-
-
 
 
 

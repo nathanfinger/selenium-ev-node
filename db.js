@@ -56,7 +56,7 @@ export async function countLivrosWithoutProperty(propertyName, propertyValue = f
             ]
         },
         fields: ["_id"],
-        limit: 0 // Set limit to 0 to retrieve only the count without fetching documents
+        limit: 1000
     };
 
     try {
