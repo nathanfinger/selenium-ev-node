@@ -1,6 +1,6 @@
 export const db = {
-    base_url: "https://expedicao.***REMOVED***",
+    base_url: "https://db.mydb.com",
     port: "36984",
     user: "admin",
-    password: "***REMOVED***"
+    password: "admin"
 };
