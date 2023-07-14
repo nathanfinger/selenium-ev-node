@@ -183,6 +183,8 @@ export const evPegaInfosPedido = async(idPedidoEv) => {
     const ids_livros = descricoes_livros.map(idFromText)
     const shippingInfo = (await getProperties('.shipping-info','innerHTML'))[0]
     const frete = (await getProperties('.sale-details__summary-freight > .col-xs-3','innerHTML'))[0].match(/\d+[,]?\d+/)[0].replace(',','.')
+    const subtotal = (await getProperties('.sale-details__summary-subtotal > .col-xs-3','innerHTML'))[0].match(/\d+[,]?\d+/)[0].replace(',','.')
+    const total = (await getProperties('.sale-details__summary-total > .col-xs-3','innerHTML'))[0].match(/\d+[,]?\d+/)[0].replace(',','.')
     const endereco = shippingInfo.split('</p>')[2].replaceAll('\n','').replaceAll('<p>','').replaceAll('  ','')
     const nome = (await getProperties('.user-info__buyer','innerHTML'))[0]
     const userInfo = (await getProperties('.user-info','innerHTML'))[0]
@@ -191,7 +193,7 @@ export const evPegaInfosPedido = async(idPedidoEv) => {
 
     // ... mais alguma coisa??
 
-    return {ids_livros, qtde, cpf, nome, frete, endereco, envio, pedido}
+    return {ids_livros, qtde, cpf, nome, frete, endereco, envio, pedido,subtotal,total}
 }
 
 
