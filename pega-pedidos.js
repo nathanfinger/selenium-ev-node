@@ -14,18 +14,18 @@ const startHandler = async ()=>{
 
     // entrando na ediçaõ de cada um
     for (const nped of pedidos) {
-        do {
-            await sleep(3)
-        } while((await currentUrl()).includes('login'))
-            try {
-                await evPgVendas() // simular navegação pra tentar evitar de derrubarem a sessão
-                await sleep(1)
-                let infos = await evPegaInfosPedido(nped)
-                infos = {...infos, origem: 'ev'}
-                await updateOrSaveDoc(infos, 'pedidos', 'pedido', infos.pedido)
-            } catch (e) {
-                closeDriver()
-            }
+        while ((await currentUrl()).includes('login')){
+            await sleep(20)
+        }
+        try {
+            await evPgVendas() // simular navegação pra tentar evitar de derrubarem a sessão
+            await sleep(1)
+            let infos = await evPegaInfosPedido(nped)
+            infos = {...infos, origem: 'ev'}
+            await updateOrSaveDoc(infos, 'pedidos', 'pedido', infos.pedido)
+        } catch (e) {
+            closeDriver()
+        }
     }
     console.log('Closing driver')
     await sleep(10)

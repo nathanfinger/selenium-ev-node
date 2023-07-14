@@ -25,6 +25,9 @@ async function removeFromEv(livro) {
         await setPropertyOnDoc(livro,'removedFromEv',true)
         return true
     }
+    while ((await currentUrl()).includes('login')){
+        await sleep(20)
+    }
     if(count===0 && !(await currentUrl()).includes('login')){
         await setPropertyOnDoc(livro,'removedFromEv',true)
         await setPropertyOnDoc(livro,'alreadyRemovedFromEv',true)
