@@ -4,7 +4,8 @@ import {
     acceptAlert,
     sleep,
     closeDriver,
-    countElements
+    countElements,
+    currentUrl
 } from './common.js'
 
 import {countLivrosWithoutProperty, getLivroWithoutProperty, setPropertyOnDoc} from './db.js'
@@ -12,17 +13,19 @@ import {countLivrosWithoutProperty, getLivroWithoutProperty, setPropertyOnDoc} f
 
 async function removeFromEv(livro) {
     await evBuscaById(livro.id_livro)
+
     let count = await countElements(`.acervo-item`)
     console.log(`Itens encontrados: ${count}`)
     if(count>0){
         await clickOnSelector('.acervo-item')
         await clickOnSelector('.action-checked')
         await sleep(0.5)
+
         await acceptAlert()
         await setPropertyOnDoc(livro,'removedFromEv',true)
         return true
     }
-    if(count===0){
+    if(count===0 && !(await currentUrl()).includes('login')){
         await setPropertyOnDoc(livro,'removedFromEv',true)
         await setPropertyOnDoc(livro,'alreadyRemovedFromEv',true)
         return true
