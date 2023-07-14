@@ -207,5 +207,10 @@ export const evSetTrackingCode = async function (code) {
 }
 
 
+export const currentUrl = async function(){
+    return await driver().getCurrentUrl()
+}
+
+
 
 
