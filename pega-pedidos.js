@@ -1,4 +1,4 @@
-import {sleep, evPegaInfosPedido, evListaPedidos, evPgVendas, closeDriver} from './common.js'
+import {sleep, evPegaInfosPedido, evListaPedidos, evPgVendas, closeDriver,currentUrl} from './common.js'
 import {updateOrSaveDoc} from './db.js'
 
 
@@ -11,8 +11,12 @@ const startHandler = async ()=>{
     console.log('pedidos identificados na página da EV:')
     console.log(pedidos)
 
+
     // entrando na ediçaõ de cada um
     for (const nped of pedidos) {
+        do {
+            await sleep(3)
+        } while((await currentUrl()).includes('login'))
             try {
                 await evPgVendas() // simular navegação pra tentar evitar de derrubarem a sessão
                 await sleep(1)
