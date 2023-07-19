@@ -6,6 +6,17 @@ Run
 npm i
 ```
 
+
+## DB config (CouchDB)
+Create a file 'config.mjs' with the credentials following this example:
+
+export const db = {
+base_url: "https://my.db.com",
+port: "36984",
+user: "myuser",
+password: "mypass"
+};
+
 ## removing books
 
 To remove the items Simply run
