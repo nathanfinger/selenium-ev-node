@@ -12,10 +12,10 @@ Create a file 'config.mjs' with the credentials following this example:
 
 ```js
 export const db = {
-base_url: "https://my.db.com",
-port: "36984",
-user: "myuser",
-password: "mypass"
+    base_url: "https://my.db.com",
+    port: "36984",
+    user: "myuser",
+    password: "mypass"
 };
 ```
 ## removing books
