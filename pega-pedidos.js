@@ -28,7 +28,7 @@ const startHandler = async ()=>{
         }
     }
     console.log('Closing driver')
-    await sleep(10)
+    await sleep(30)
     closeDriver()
 }
 
