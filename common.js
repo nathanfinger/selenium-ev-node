@@ -177,6 +177,7 @@ export const evPgVendas = async() =>{
 export const evPegaInfosPedido = async(idPedidoEv) => {
     await evPgPedido(''+idPedidoEv)
 
+    const data = new Date()
     const pedido = ''+idPedidoEv
     const qtde = await countElements('.sale-details__summary-product-title')
     const descricoes_livros = (await getProperties('.order-sale__data-description-text','innerHTML'))
@@ -193,7 +194,7 @@ export const evPegaInfosPedido = async(idPedidoEv) => {
 
     // ... mais alguma coisa??
 
-    return {ids_livros, qtde, cpf, nome, frete, endereco, envio, pedido,subtotal,total}
+    return {ids_livros, qtde, cpf, nome, frete, endereco, envio, pedido, subtotal, total, data}
 }
 
 
