@@ -20,28 +20,19 @@ export const db = {
 ```
 ## removing books
 
-To remove the items Simply run
+To remove books from EV Simply run
 ```bash
 node run.js
 ```
-
-To scrape the data drom the orders, run
-(this one's auth is expiring fast, idk why)
-```bash
-node pega-pedidos.js
-```
-
-## Basic Functionality
+### Functionality
 It reads a couchDB via Mango Query and looks for books without the property 'removedFromEv'.
 Then it opens a browser (it can be in headless mode, hard coded for now) and tries to remove all of those books from EV.
 
 
-## Scraping orders data
-To scrape the data drom the orders, run
-(this one's auth is expiring fast, idk why)
+To scrape the data from the orders, run
+(this one's auth is expiring faster, idk why)
 ```bash
 node pega-pedidos.js
 ```
-
-## Basic Functionality
+### Functionality
 It reads the orders pages then extracts the buyers info.
