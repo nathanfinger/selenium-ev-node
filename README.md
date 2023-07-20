@@ -29,6 +29,7 @@ It reads a couchDB via Mango Query and looks for books without the property 'rem
 Then it opens a browser (it can be in headless mode, hard coded for now) and tries to remove all of those books from EV.
 
 
+## getting new orders
 To scrape the data from the orders, run
 (this one's auth is expiring faster, idk why)
 ```bash
