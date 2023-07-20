@@ -24,6 +24,7 @@ const startHandler = async ()=>{
             infos = {...infos, origem: 'ev'}
             await updateOrSaveDoc(infos, 'pedidos', 'pedido', infos.pedido)
         } catch (e) {
+            console.log(e)
             closeDriver()
         }
     }
