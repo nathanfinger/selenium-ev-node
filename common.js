@@ -189,12 +189,17 @@ export const evPegaInfosPedido = async(idPedidoEv) => {
     const endereco = shippingInfo.split('</p>')[2].replaceAll('\n','').replaceAll('<p>','').replaceAll('  ','')
     const nome = (await getProperties('.user-info__buyer','innerHTML'))[0]
     const userInfo = (await getProperties('.user-info','innerHTML'))[0]
-    const cpf = userInfo.split('CPF: ')[1].split(' ')[0]
+
+    let cpf,cnpj;
+    if(userInfo.includes('CPF'))
+        cpf = userInfo.split('CPF: ')[1].split(' ')[0]
+    if(userInfo.includes('CNPJ'))
+        cnpj = userInfo.split('CNPJ: ')[1].split(' ')[0]
     const envio = (await getProperties('.shipping-type-info span','innerHTML'))[0].match(/\w+/)[0]
 
     // ... mais alguma coisa??
 
-    return {ids_livros, qtde, cpf, nome, frete, endereco, envio, pedido, subtotal, total, data}
+    return {ids_livros, qtde, cpf, nome, frete, endereco, envio, pedido, subtotal, total, data, cnpj}
 }
 
 
