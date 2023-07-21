@@ -167,15 +167,34 @@ export const evPgCadastro = async() =>{
     const url = 'https://www.estantevirtual.com.br/acervo/editar'
     await get(url)
 }
-export const evPgVendas = async() =>{
+export const evPgVendas = async(pagina=1) =>{
     console.log(`Getting sales page: ${''}`);
-    const urlVendas = 'https://livreiro.estantevirtual.com.br/vendas/?termo=&periodo=total&status=standby&forma_pagamento=todas&carrier=&envio=&rows_per_page=100'
+
+    // ultimos 100 pedidos
+    const urlVendas = `https://livreiro.estantevirtual.com.br/vendas/?termo=&periodo=total&status=total&forma_pagamento=todas&carrier=&envio=&rows_per_page=100&pagina=${pagina}`
+
+    // apenas aguardando envio
+    // const urlVendas = 'https://livreiro.estantevirtual.com.br/vendas/?termo=&periodo=total&status=standby&forma_pagamento=todas&carrier=&envio=&rows_per_page=100'
+
     await get(urlVendas)
 }
 
+export const tryMatch = function(str,patt,replcomma=true,index=0){
+    let str0 = str
+    try {
+        str = str.match(patt)[index]
+        if(replcomma) str = str.replace(',','.')
+        return str
+    } catch (e) {
+        console.log(e)
+        return str0
+    }
+}
 
 export const evPegaInfosPedido = async(idPedidoEv) => {
+
     await evPgPedido(''+idPedidoEv)
+    await sleep(2)
 
     const data = new Date()
     const pedido = ''+idPedidoEv
@@ -183,29 +202,49 @@ export const evPegaInfosPedido = async(idPedidoEv) => {
     const descricoes_livros = (await getProperties('.order-sale__data-description-text','innerHTML'))
     const ids_livros = descricoes_livros.map(idFromText)
     const shippingInfo = (await getProperties('.shipping-info','innerHTML'))[0]
-    const frete = (await getProperties('.sale-details__summary-freight > .col-xs-3','innerHTML'))[0].match(/\d+[,]?\d+/)[0].replace(',','.')
-    const subtotal = (await getProperties('.sale-details__summary-subtotal > .col-xs-3','innerHTML'))[0].match(/\d+[,]?\d+/)[0].replace(',','.')
-    const total = (await getProperties('.sale-details__summary-total > .col-xs-3','innerHTML'))[0].match(/\d+[,]?\d+/)[0].replace(',','.')
-    const endereco = shippingInfo.split('</p>')[2].replaceAll('\n','').replaceAll('<p>','').replaceAll('  ','')
     const nome = (await getProperties('.user-info__buyer','innerHTML'))[0]
     const userInfo = (await getProperties('.user-info','innerHTML'))[0]
+    const statusEv = (await getProperties('.status-label','innerHTML'))[0].trim()
+
+    let frete = (await getProperties('.sale-details__summary-freight > .col-xs-3','innerHTML'))[0]
+    let subtotal = (await getProperties('.sale-details__summary-subtotal > .col-xs-3','innerHTML'))[0]
+    let total = (await getProperties('.sale-details__summary-total > .col-xs-3','innerHTML'))[0]
+    frete = tryMatch(frete,/\d+[,]?\d+/)
+    subtotal = tryMatch(subtotal,/\d+[,]?\d+/)
+    total = tryMatch(total,/\d+[,]?\d+/)
+
+    const paymentEvFeitoEm = (await getProperties('.payment-info > span','innerHTML'))[0]
+    const paymentEvPagoEm = (await getProperties('.payment-info > span','innerHTML'))[1]
+    const rastreio = (await getProperties('.link-like-btn, used', 'value'))[0]
+
+    let endereco = shippingInfo
+    try{
+        endereco = endereco.split('</p>')[2].replaceAll('\n','').replaceAll('<p>','').replaceAll('  ','')
+    }catch(e){
+        console.log(shippingInfo)
+    }
+
+
 
     let cpf,cnpj;
     if(userInfo.includes('CPF'))
         cpf = userInfo.split('CPF: ')[1].split(' ')[0]
     if(userInfo.includes('CNPJ'))
         cnpj = userInfo.split('CNPJ: ')[1].split(' ')[0]
-    const envio = (await getProperties('.shipping-type-info span','innerHTML'))[0].match(/\w+/)[0]
+    let envio = (await getProperties('.shipping-type-info span','innerHTML'))[0]
+        envio = tryMatch(envio,/\w+/,false)
 
     // ... mais alguma coisa??
 
-    return {ids_livros, qtde, cpf, nome, frete, endereco, envio, pedido, subtotal, total, data, cnpj}
+    return {ids_livros, qtde, cpf, nome, frete, endereco, envio, pedido, subtotal, total, data, cnpj, statusEv, paymentEvPagoEm, paymentEvFeitoEm, rastreio}
 }
 
 
 export const evListaPedidos = async function(){
     return  (await getProperties('.order','innerHTML')).map(e=>e.match(/\d+/)[0])
-
+}
+export const evListaStatus = async function(){
+    return  (await getProperties('.status-label','innerHTML'))
 }
 
 
