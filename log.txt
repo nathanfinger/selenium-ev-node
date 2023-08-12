@@ -1,0 +1,11 @@
+Getting sales page:  ... status standby 'aguardando envio'
+Driver does not exist.. instancing new driver ...
+Applicable driver not found; attempting to install with Selenium Manager (Beta)
+Sleeping for 2 seconds
+Found an error... Closing driver
+ReferenceError: evPgVendasDelayed is not defined
+    at startHandler (file:///home/ev/traca/selenium-ev-node/coloca-rastreio.js:31:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///home/ev/traca/selenium-ev-node/coloca-rastreio.js:79:5
+Sleeping for 10 seconds
+Closing driver

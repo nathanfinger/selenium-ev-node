@@ -5,6 +5,7 @@ import chrome from 'selenium-webdriver/chrome.js'
 let _driver = null;
 let profileDirectory='./profiles/chrome1'
 
+
 export const driver = () => {
     const options = new chrome.Options();
     options.addArguments('--user-data-dir='+profileDirectory);
@@ -109,8 +110,13 @@ export const acceptAlert = async () => {
 };
 
 export const closeDriver = async () =>{
+    if (_driver === null) return ''
     console.log(`Closing driver`);
-    driver().close()
+    try {
+        driver().close()
+    } catch (e) {
+        console.log(e)
+    }
 }
 
 export const countElements = async(selector) =>{
@@ -172,12 +178,22 @@ export const evPgVendas = async(pagina=1) =>{
 
     // ultimos 100 pedidos
     const urlVendas = `https://livreiro.estantevirtual.com.br/vendas/?termo=&periodo=total&status=total&forma_pagamento=todas&carrier=&envio=&rows_per_page=100&pagina=${pagina}`
-
-    // apenas aguardando envio
-    // const urlVendas = 'https://livreiro.estantevirtual.com.br/vendas/?termo=&periodo=total&status=standby&forma_pagamento=todas&carrier=&envio=&rows_per_page=100'
-
     await get(urlVendas)
 }
+
+export const evPgVendasStandyBy = async() =>{
+    console.log(`Getting sales page: ${''} ... status standby 'aguardando envio'`);
+    // apenas aguardando envio
+    const urlVendas = 'https://livreiro.estantevirtual.com.br/vendas/?termo=&periodo=total&status=standby&forma_pagamento=todas&carrier=&envio=&rows_per_page=100'
+    await get(urlVendas)
+}
+export const evPgVendasDelayed = async() =>{
+    console.log(`Getting sales page: ${''} ... status delayed 'atrasado'`);
+    // apenas aguardando envio
+    const urlVendas = 'https://livreiro.estantevirtual.com.br/vendas/?termo=&periodo=total&status=delayed&forma_pagamento=todas&carrier=&envio=&rows_per_page=100'
+    await get(urlVendas)
+}
+
 
 export const tryMatch = function(str,patt,replcomma=true,index=0){
     let str0 = str
@@ -201,6 +217,9 @@ export const evPegaInfosPedido = async(idPedidoEv) => {
     const qtde = await countElements('.sale-details__summary-product-title')
     const descricoes_livros = (await getProperties('.order-sale__data-description-text','innerHTML'))
     const ids_livros = descricoes_livros.map(idFromText)
+    const precos = (await getProperties('.order-sale__data-price','innerHTML'))
+    const precos_livros = precos.map(p=> tryMatch(p,/\d+[,]?\d+/))
+
     const shippingInfo = (await getProperties('.shipping-info','innerHTML'))[0]
     const nome = (await getProperties('.user-info__buyer','innerHTML'))[0]
     const userInfo = (await getProperties('.user-info','innerHTML'))[0]
@@ -218,8 +237,10 @@ export const evPegaInfosPedido = async(idPedidoEv) => {
     const rastreio = (await getProperties('.link-like-btn, used', 'value'))[0]
 
     let endereco = shippingInfo
+    let recebedor = ''
     try{
-        endereco = endereco.split('</p>')[2].replaceAll('\n','').replaceAll('<p>','').replaceAll('  ','')
+        endereco = shippingInfo.split('</p>')[2].replaceAll('\n','').replaceAll('<p>','').replaceAll('  ','')
+        recebedor = shippingInfo.split('Recebedor: ')[1].split('</p>')[0]
     }catch(e){
         console.log(shippingInfo)
     }
@@ -235,8 +256,11 @@ export const evPegaInfosPedido = async(idPedidoEv) => {
         envio = tryMatch(envio,/\w+/,false)
 
     // ... mais alguma coisa??
-
-    return {ids_livros, qtde, cpf, nome, frete, endereco, envio, pedido, subtotal, total, data, cnpj, statusEv, paymentEvPagoEm, paymentEvFeitoEm, rastreio}
+    return {ids_livros, precos_livros, qtde, pedido, subtotal, total, statusEv, frete, envio,
+        cpf, nome, endereco, cnpj, recebedor,
+        data,  paymentEvPagoEm, paymentEvFeitoEm, rastreio,
+        shipping_info_raw: shippingInfo
+    }
 }
 
 
@@ -248,9 +272,11 @@ export const evListaStatus = async function(){
 }
 
 
-export const evSetTrackingCode = async function (code) {
-    sendKeysToInput('#tracking_code',code)
-    // clickOnSelector('#tracking_code_btn')
+export const evSetTrackingCode = async function (code,save=false) {
+    await sendKeysToInput('#tracking_code',code)
+    if(save){
+        await clickOnSelector('#tracking_code_btn')
+    }
 }
 
 

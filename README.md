@@ -37,3 +37,9 @@ node pega-pedidos.js
 ```
 ### Functionality
 It reads the orders pages then extracts the buyers info.
+
+
+
+# Troubleshooting
+If chromium is open, it won't be able to work
+so make sure to close it after errors etc

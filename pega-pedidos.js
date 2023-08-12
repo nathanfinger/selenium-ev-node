@@ -1,5 +1,14 @@
-import {sleep, evPegaInfosPedido, evListaPedidos, evPgVendas, closeDriver, currentUrl, evListaStatus} from './common.js'
-import {updateOrSaveDoc} from './db.js'
+import {
+    sleep,
+    evPegaInfosPedido,
+    evListaPedidos,
+    evPgVendas,
+    closeDriver,
+    currentUrl,
+    evListaStatus,
+    evPgVendasStandyBy,
+} from './common.js'
+import {getTableDocWithProperty, updateOrSaveDoc} from './db.js'
 
 
 
@@ -7,26 +16,42 @@ const startHandler = async ()=>{
 
     // página de pedidos
     await evPgVendas(1)
+    await sleep(2)
     let pedidos = await evListaPedidos()
     let pedidosStatus = await evListaStatus()
+    let pedidosDiff = []
 
     // pagina 2
-    await sleep(2)
     await evPgVendas(2)
+    await sleep(2)
     pedidos = pedidos.concat(await evListaPedidos())
     pedidosStatus = pedidosStatus.concat(await evListaStatus())
 
-    console.log('Pedidos identificados:')
-    console.log(pedidos)
+    // pagina 1 de 'aguardando envio'
+    await evPgVendasStandyBy()
+    await sleep(2)
+    pedidos = pedidos.concat(await evListaPedidos())
+    pedidosStatus = pedidosStatus.concat(await evListaStatus())
 
 
-    // TODO filtrar status que não mudaram
+    // filtrar status que não mudaram
     // por aqui já é possível identificar o statusEv pra fazer o scraping só dos pedidos que mudaram statusEv
-    // console.log(pedidosStatus)
+    for (let i in pedidos){
+        const pNumber = pedidos[i]
+        const docs = await(getTableDocWithProperty('pedidos', 'pedido', pNumber))
+        if(docs.length===0 || docs[0].statusEv !== pedidosStatus[i]){
+            pedidosDiff.push(pNumber)
+        }
+    }
+
+
+    // tem que testar, mas teoricamente a princípio é só trocar o pedidos por pedidosDiff aqui no nped do for .. of
+    console.log(`Pedidos identificados: ${pedidosDiff.length}`)
+    console.log(pedidosDiff)
 
 
     // entrando na ediçaõ de cada um
-    for (const nped of pedidos) {
+    for (const nped of pedidosDiff) {
         while ((await currentUrl()).includes('login')){
             await sleep(20)
         }
@@ -46,4 +71,13 @@ const startHandler = async ()=>{
     closeDriver()
 }
 
-startHandler()
+
+
+
+// main handler
+try {
+    await startHandler()
+    closeDriver()
+} catch (e) {
+    closeDriver()
+}

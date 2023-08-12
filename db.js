@@ -107,6 +107,23 @@ export async function updateOrSaveDoc(data, table,prop='id',value='') {
 }
 
 
+export async function getTableDocWithProperty(table='pedidos', propertyName, propertyValue=true) {
+    const endpoint = `/${table}/_find`;
+    const requestBody = {
+        selector: {
+            [propertyName]: {$eq: propertyValue}
+        },
+        limit: 1
+    };
+
+    try {
+        const response = await instance.post(endpoint, requestBody);
+        return response.data.docs;
+    } catch (error) {
+        console.error(error);
+    }
+}
+
 
 export async function test(){
     let book = await getLivroWithoutProperty('removedFromEv',false)
