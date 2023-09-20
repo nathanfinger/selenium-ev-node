@@ -1,4 +1,5 @@
 import {
+    log,
     sleep,
     evPegaInfosPedido,
     evListaPedidos,
@@ -36,6 +37,7 @@ const startHandler = async ()=>{
 
     // filtrar status que não mudaram
     // por aqui já é possível identificar o statusEv pra fazer o scraping só dos pedidos que mudaram statusEv
+    log({robot:'pega-pedidos', log: `Avaliando ${pedidos.length} pedidos`})
     for (let i in pedidos){
         const pNumber = pedidos[i]
         const docs = await(getTableDocWithProperty('pedidos', 'pedido', pNumber))
@@ -44,10 +46,8 @@ const startHandler = async ()=>{
         }
     }
 
-
     // tem que testar, mas teoricamente a princípio é só trocar o pedidos por pedidosDiff aqui no nped do for .. of
-    console.log(`Pedidos identificados: ${pedidosDiff.length}`)
-    console.log(pedidosDiff)
+    log({robot:'pega-pedidos', log: `Iniciando importação de ${pedidosDiff.length} Pedidos com mudança`})
 
 
     // entrando na ediçaõ de cada um
@@ -75,9 +75,12 @@ const startHandler = async ()=>{
 
 
 // main handler
+log({robot:'pega-pedidos', log: 'Iniciando handler'})
 try {
     await startHandler()
     closeDriver()
 } catch (e) {
     closeDriver()
 }
+log({robot:'pega-pedidos', log: 'Fim do handler'})
+

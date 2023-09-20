@@ -1,4 +1,5 @@
 import {
+    log,
     sleep,
     closeDriver,
     evPgPedido,
@@ -33,6 +34,8 @@ const startHandler = async ()=>{
     let pedidos2 = await evListaPedidos()
     pedidos = pedidos.concat(pedidos2)
 
+    log({robot:'coloca-rastreio', log: `Pedidos Identificados: ${pedidos2.length} atrasados e ${pedidos.length - pedidos2.length} em Stand By, `})
+
 
 
 
@@ -66,6 +69,7 @@ const startHandler = async ()=>{
 
         if(cod_rastreio !== undefined){
             await rastreioNoPedidoEv(pedido, cod_rastreio, true)
+            log({robot:'coloca-rastreio', log: `Código de rastreio (${cod_rastreio}) colocado no pedido ${pedido}`})
             await sleep(2)
         }
     }
@@ -75,6 +79,7 @@ const startHandler = async ()=>{
 
 
 // main handler
+log({robot:'coloca-rastreio', log: `Iniciando handler`})
 try {
     await startHandler()
     closeDriver()
@@ -84,4 +89,6 @@ try {
     await sleep(10)
     closeDriver()
 }
+log({robot:'coloca-rastreio', log: `Finalizando handler`})
+
 

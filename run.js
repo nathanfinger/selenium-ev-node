@@ -1,14 +1,16 @@
 import {
+    log,
     evBuscaById,
     clickOnSelector,
     acceptAlert,
     sleep,
     closeDriver,
     countElements,
-    currentUrl
+    currentUrl,
+    driver
 } from './common.js'
 
-import {countLivrosWithoutProperty, getLivroWithoutProperty, setPropertyOnDoc} from './db.js'
+import {getConfig, countLivrosWithoutProperty, getLivroWithoutProperty, setPropertyOnDoc} from './db.js'
 import {getLivrosNaoDisponiveisWithProperty, getLivrosWithProperty as l_getLivrosWithProperty, setPropertyOnDoc as l_setPropertyOnDoc} from "./db_livros.js";
 
 
@@ -81,7 +83,7 @@ async function startHandler(n= 1,maxN= 10){
     }
     console.log(`handler ${n} / ${maxN}`)
 
-    let livro = await getLivroWithoutProperty('removedFromEv')
+    let livro = await getLivroWithoutProperty(config.propRemovido)
     if (livro.length===0) {
         nothing = true
     } else {
@@ -92,17 +94,20 @@ async function startHandler(n= 1,maxN= 10){
     }
 
 
-    let retirarEv = await getLivrosNaoDisponiveisWithProperty('colocadoEv',true)
+    let retirarEv = await getLivrosNaoDisponiveisWithProperty(config.propColocado,true)
     if (nothing && retirarEv.length===0) {
         console.log('Nada a retirar..')
         closeDriver()
+        log({robot:'run', log: `Sem mais livros para remover`})
         return 'Sem livros para remover';
     } else {
-        console.log('Retirando agora os livros da EV que não estão no status 4... ')
+        log({robot:'run', log: `Retirando agora os livros da EV que não estão no status 4...`})
+
         for (let book of retirarEv){
             console.log(`Starting removal of id: ${book.id}`)
             await sleep(1)
             await removeIndisponivelFromEv(book)
+            log({robot:'run', log: `Removido o livro de id: ${book.id}`})
         }
     }
     await startHandler(n+1, maxN)
@@ -110,13 +115,48 @@ async function startHandler(n= 1,maxN= 10){
 
 
 
-let queue_max = 2000
+
+
+
+
+
+
+
+var defaultConfig = {
+    _id: 'config-robots-ev',
+    _rev: '1-0c1fe6ff18a2b33167d1043ac11435ae',
+    remover: {
+        propCadastrado: "colocadoEv",
+        browserHeadless: false,
+        chromeProfilePath: "./profiles/chrome1",
+        shuffleOrder: true,
+        propRemovido: "removidoEv",
+        queue_max:1000
+      }
+}
+
+let configImported = await getConfig()
+let config = {...defaultConfig, ...configImported}
+config = config.remover
+let queue_max = config.queue_max
+
+
+
+log({robot:'run', log: `Iniciando handler`})
 try {
+    // abre driver em profile diferente
+    driver({
+        'profile': config.chromeProfilePath,
+        'headless': config.browserHeadless
+    })
+
     await startHandler(1, queue_max)
     console.log('All Done..')
     await sleep(5)
     closeDriver()
 } catch (e) {
     console.log('Found an Error..')
+    console.log(e)
     closeDriver()
 }
+log({robot:'run', log: `Finalizando handler`})

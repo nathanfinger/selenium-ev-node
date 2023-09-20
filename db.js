@@ -10,6 +10,7 @@ const instance = axios.create({
 });
 
 
+
 export async function getLivroWithoutProperty(propertyName, propertyValue=false) {
     const endpoint = "/local_mysql_expedicao/_find";
     const requestBody = {
@@ -128,4 +129,24 @@ export async function getTableDocWithProperty(table='pedidos', propertyName, pro
 export async function test(){
     let book = await getLivroWithoutProperty('removedFromEv',false)
     console.log(book)
+}
+
+
+
+export async function getConfig(){
+    const endpoint = `/robots-config/_find`;
+    const requestBody = {
+        selector: {
+            "_id": {$eq: "config-robots-ev"}
+        },
+        limit: 1
+    };
+
+    try {
+        const response = await instance.post(endpoint, requestBody);
+        return response.data.docs[0];
+    } catch (error) {
+        console.error(error);
+    }
+
 }

@@ -1,22 +1,30 @@
 import { Builder, By, until } from 'selenium-webdriver';
 import chrome from 'selenium-webdriver/chrome.js'
 
-
 let _driver = null;
 let profileDirectory='./profiles/chrome1'
 
-
-export const driver = () => {
-    const options = new chrome.Options();
-    options.addArguments('--user-data-dir='+profileDirectory);
-    // options.addArguments('--headless');
-
+export const driver = (opts) => {
     if(_driver) return _driver;
+
+
     console.log(`Driver does not exist.. instancing new driver ...`)
+    const options = new chrome.Options();
+
+    // profile dir
+    let profile = profileDirectory
+    if(opts && opts['profile']) profile = opts['profile'];
+    options.addArguments('--user-data-dir='+profile);
+
+    // headless mode?
+    if(opts && opts['headless']) options.addArguments('--headless');
+
+    // instancing driver with options
     _driver = new Builder()
         .forBrowser('chrome')
         .setChromeOptions(options)
         .build();
+    console.log(options)
     return _driver;
 }
 
@@ -138,6 +146,18 @@ export const getElements = async(selector) =>{
     }
 }
 
+export const getLinkEditar = async (driver) => {
+    let tbody = driver().find_element(By.css, 'tbody')
+    let trs = tbody.find_elements(By.css, 'tr')    
+    if(len(trs)>0){
+        let editar_url = trs[0].find_elements(By.css, 'a')[1].get_attribute('href')
+        await get(editar_url)
+        return true;
+    }
+    return false;
+}
+
+
 export const getProperties = async (selector, prop = 'innerHTML') => {
     try {
         const elements = await driver().findElements(By.css(selector));
@@ -158,6 +178,10 @@ export const evBuscaById = async(idSearch) =>{
     let urlBusca = 'https://www.estantevirtual.com.br/acervo?sub=listar&ativos=0&alvo=descr&pchave='+idSearch
     await get(urlBusca)
 }
+
+
+
+
 
 export const idFromText = text=>{
     return text.match(/ID \d+/g)[0].replace('ID ','')
@@ -210,20 +234,26 @@ export const tryMatch = function(str,patt,replcomma=true,index=0){
 export const evPegaInfosPedido = async(idPedidoEv) => {
 
     await evPgPedido(''+idPedidoEv)
-    await sleep(2)
+    await sleep(4)
 
     const data = new Date()
     const pedido = ''+idPedidoEv
-    const qtde = await countElements('.sale-details__summary-product-title')
-    const descricoes_livros = (await getProperties('.order-sale__data-description-text','innerHTML'))
-    const ids_livros = descricoes_livros.map(idFromText)
-    const precos = (await getProperties('.order-sale__data-price','innerHTML'))
-    const precos_livros = precos.map(p=> tryMatch(p,/\d+[,]?\d+/))
+    let pedidoFromPage = (await getProperties('.sale-details__order-data-title','innerHTML'))[0]
+    pedidoFromPage = tryMatch(pedidoFromPage,/(\d+)/)
+    if(!pedidoFromPage) pedidoFromPage = pedido
 
-    const shippingInfo = (await getProperties('.shipping-info','innerHTML'))[0]
-    const nome = (await getProperties('.user-info__buyer','innerHTML'))[0]
-    const userInfo = (await getProperties('.user-info','innerHTML'))[0]
-    const statusEv = (await getProperties('.status-label','innerHTML'))[0].trim()
+    let url = await currentUrl()
+    let pedidoUrl = url.split('/').pop()
+    let qtde = await countElements('.sale-details__summary-product-title')
+    let descricoes_livros = (await getProperties('.order-sale__data-description-text','innerHTML'))
+    let ids_livros = descricoes_livros.map(idFromText)
+    let precos = (await getProperties('.order-sale__data-price','innerHTML'))
+    let precos_livros = precos.map(p=> tryMatch(p,/\d+[,]?\d+/))
+
+    let shippingInfo = (await getProperties('.shipping-info','innerHTML'))[0]
+    let nome = (await getProperties('.user-info__buyer','innerHTML'))[0]
+    let userInfo = (await getProperties('.user-info','innerHTML'))[0]
+    let statusEv = (await getProperties('.status-label','innerHTML'))[0].trim()
 
     let frete = (await getProperties('.sale-details__summary-freight > .col-xs-3','innerHTML'))[0]
     let subtotal = (await getProperties('.sale-details__summary-subtotal > .col-xs-3','innerHTML'))[0]
@@ -232,9 +262,9 @@ export const evPegaInfosPedido = async(idPedidoEv) => {
     subtotal = tryMatch(subtotal,/\d+[,]?\d+/)
     total = tryMatch(total,/\d+[,]?\d+/)
 
-    const paymentEvFeitoEm = (await getProperties('.payment-info > span','innerHTML'))[0]
-    const paymentEvPagoEm = (await getProperties('.payment-info > span','innerHTML'))[1]
-    const rastreio = (await getProperties('.link-like-btn, used', 'value'))[0]
+    let paymentEvFeitoEm = (await getProperties('.payment-info > span','innerHTML'))[0]
+    let paymentEvPagoEm = (await getProperties('.payment-info > span','innerHTML'))[1]
+    let rastreio = (await getProperties('.link-like-btn, used', 'value'))[0]
 
     let endereco = shippingInfo
     let recebedor = ''
@@ -256,7 +286,7 @@ export const evPegaInfosPedido = async(idPedidoEv) => {
         envio = tryMatch(envio,/\w+/,false)
 
     // ... mais alguma coisa??
-    return {ids_livros, precos_livros, qtde, pedido, subtotal, total, statusEv, frete, envio,
+    return {ids_livros, precos_livros, qtde, pedido: pedidoFromPage, pedidoFromPage, pedidoUrl, url,  subtotal, total, statusEv, frete, envio,
         cpf, nome, endereco, cnpj, recebedor,
         data,  paymentEvPagoEm, paymentEvFeitoEm, rastreio,
         shipping_info_raw: shippingInfo
@@ -284,6 +314,15 @@ export const currentUrl = async function(){
     return await driver().getCurrentUrl()
 }
 
+export const log = async function(obj){
+    console.log(`${obj.robot} - ${obj.log}`)
+}
+
+
+export const zulip_session_bot = {
+    email: 'ev-session-bot@zulip.queepi.com',
+    key: 'WKb7t9zcFaDDoeozm27ewD1GFfrqei3d'
+}
 
 
 
