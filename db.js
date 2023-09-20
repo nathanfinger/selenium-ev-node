@@ -10,7 +10,6 @@ const instance = axios.create({
 });
 
 
-
 export async function getLivroWithoutProperty(propertyName, propertyValue=false) {
     const endpoint = "/local_mysql_expedicao/_find";
     const requestBody = {

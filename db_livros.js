@@ -157,8 +157,6 @@ export async function getLivrosColocarEv(limit=999999) {
 
 }
 
-
-
 export async function getLivrosNaoDisponiveisWithProperty(propertyName='status', propertyValue=4, limit=999999) {
     const endpoint = `/${'livros_amz'}/_find`;
     const requestBody = {
@@ -219,14 +217,10 @@ export async function getCapaByDoc(doc){
     return capa
 }
 
-
 export async function getCapaTeste(id){
     let capa = await getAttachment('test', '9ed784f939332289e1be26fd1c0072e9', '1553351.jpg')
     return capa
 }
-
-
-
 
 
 export async function getLivrosDisponiveisBetweenIds(idMin=1562862, idMax=1568849, limit = 500) {
@@ -267,8 +261,6 @@ export async function getLivrosColocarEvBetweenIds(idMin=1562862, idMax=1568849,
     let x = await postDocs(endpoint, requestBody)
     return x
 }
-
-
 
 export const saveErroCadastro = async function (doc, errors){
     let errorsCadastro = 0

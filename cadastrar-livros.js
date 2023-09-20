@@ -1,5 +1,5 @@
 import {getProperties, log, driver, closeDriver, clickOnSelector, evPgCadastro, sendKeysToInput, sleep, currentUrl} from "./common.js";
-import {getLivrosColocarEvBetweenIds, getCapaByDoc, setPropertyOnDoc as l_setPropertyOnDoc, saveErroCadastro} from "./db_livros.js";
+import {getLivrosColocarEvBetweenIds, getCapaByDoc, setPropertyOnDoc, saveErroCadastro} from "./db_livros.js";
 import {getConfig} from "./db.js";
 
 import {resolve} from 'path'
@@ -7,8 +7,15 @@ import fs from 'fs'
 
 
 
+// artifício para testes
+function isProd(){
+    return config.salvarLivros || config.salvarLivros===undefined
+}
 
-const sel = {
+
+// DICIONÁRIO DE SELETORES PRO CADASTRO
+const evSelectors = {
+    error: '.error',
     isbn: '#form_isbn',
     barcode: '#form_barcode',
     estante: '#form_estante',
@@ -27,6 +34,7 @@ const sel = {
 
 const preencheForm = async (doc,pathImg) => {
 
+    // seta os campos todos
     let isbn = doc.isbnEv || doc.isbn || ''
     let estante = doc.assuntoEv || doc.assunto
     let autor = doc.autorEv || doc.autor
@@ -38,7 +46,6 @@ const preencheForm = async (doc,pathImg) => {
     let descricao = doc.obsEstadoConservacao
     let capa = pathImg || ''
 
-    // conjunto de regras
 
     // padrão da EV: editora em lowercase
     estante = estante.split('.')[0]
@@ -62,40 +69,43 @@ const preencheForm = async (doc,pathImg) => {
     if(!autor) autor = 'Equipe Editorial';
 
     
-    await sendKeysToInput('#form_estante', 'outr')
-    await sendKeysToInput('#form_isbn', isbn)
-    await sendKeysToInput('#form_capa', capa)
-    await sendKeysToInput('#form_autor', autor)
-    await sendKeysToInput('#form_ano', ano)
-    await sendKeysToInput('#form_titulo', titulo)
-    await sendKeysToInput('#form_editora', editora)
-    await sendKeysToInput('#form_preco', preco)
-    await sendKeysToInput('#form_descricao', descricao)
-    await sendKeysToInput('#form_estante', estante)
-    await sendKeysToInput('#form_peso', peso)
+    await sendKeysToInput(evSelectors['estante'], 'outr')
+    await sendKeysToInput(evSelectors['isbn'], isbn)
+    await sendKeysToInput(evSelectors['capa'], capa)
+    await sendKeysToInput(evSelectors['autor'], autor)
+    await sendKeysToInput(evSelectors['ano'], ano)
+    await sendKeysToInput(evSelectors['titulo'], titulo)
+    await sendKeysToInput(evSelectors['editora'], editora)
+    await sendKeysToInput(evSelectors['preco'], preco)
+    await sendKeysToInput(evSelectors['descricao'], descricao)
+    await sendKeysToInput(evSelectors['estante'], estante)
+    await sendKeysToInput(evSelectors['peso'], peso)
 
+    // artifício para testes
     if(isProd()) {
         console.log('...salvando...')
         await clickOnSelector('.btn-add-acervo')       
     }
 
+    // pra não depender exclusivamente do selenium, vou esperar um tempo
     let waitx = config.esperarSegundosAposSalvar || 5
     await sleep(waitx)
+
+
+    // testa se a URL ocntinua a mesma (falha)
+    // se encontrar erros registra
     let url = await currentUrl()
     if(url.includes('/acervo/editar')){
-        let errors = await getProperties('.error', 'innerHTML')
+        let errors = await getProperties(evSelectors['error'], 'innerHTML')
         await saveErroCadastro(doc, errors)
-
         throw new Error('Ocorreu algum erro inesperado nos dados de cadastro do livro');
     }
 }
 
 
-
+// download da capa, dado o doc
 async function downloadCapa(doc, path='./img_cadastro.jpg'){
-    // let capa = await getCapaTeste();
-    let capa = await getCapaByDoc(doc);
-    
+    let capa = await getCapaByDoc(doc);   
     await fs.promises.writeFile(path, capa.data);
     console.log('File saved successfully:', path);
 }
@@ -106,7 +116,6 @@ async function downloadCapa(doc, path='./img_cadastro.jpg'){
 async function cadastraDoc(doc){
     let path = './img_cadastro.jpg';
     path = resolve(path)
-
     try {
         await downloadCapa(doc,path);        
         await sleep(0.5)
@@ -120,82 +129,92 @@ async function cadastraDoc(doc){
         return false
     }
 
-    if(isProd()) await l_setPropertyOnDoc(doc,'colocadoEv',true)
-
+    if(isProd()) await setPropertyOnDoc(doc,'colocadoEv',true)
     return true
 }
 
 
 
-
-
+// algumas condições setadas nas configurações, pra ignorar o cadastro
 function testConditionsToIgnore(doc,config){
 
-    // rodando 'manualmente' num range sem essa prop
+    // rodando 'manualmente' num range sem essa prop (com a getLivrosColocarEvBetweenIds)
+    // depois de estável trocar pela getLivrosColocarEv e ativar essa condição
     // if(!doc[config.propCadastrar]) return true ;
 
+    // valida doc.id
     if(doc.id > config.ignoraIdMaiorQue ) return true ;
     if(doc.id < config.ignoraIdMenorQue ) return true ;
 
+    // valida doc.preco
     if(!doc.precoEv && doc.precoVenda < config.ignoraPrecoMenorQue ) return true ;
     if(doc.precoEv && doc.precoEv < config.ignoraPrecoMenorQue ) return true ;
-
     if(!doc.precoEv && doc.precoVenda > config.ignoraPrecoMaiorQue ) return true ;
     if(doc.precoEv && doc.precoEv > config.ignoraPrecoMaiorQue ) return true ;
 
+    // valida texto de exclusão
     if(doc.obsEstadoConservacao.includes(config.ignoraSeDescricaoContemTexto)) return true ;
 
+    // espera um tempo após cadastro
     let tempoCadastro = Date.now() - (new Date(doc.dataEntrada))
     if( tempoCadastro/(1000*60*60) < config.afterCadastroWaitHours) return true ;
 }
 
 
 
-async function startHandler(config){
-    
+
+
+async function startHandler(config){   
     console.log('Buscando livros no banco')
-    // rodando 'manualmente' num range
+
+    // rodando inicialmente 'manualmente' num range, depois trocar por essa getLivrosColocarEv
     // let docs = await getLivrosColocarEv(50)
-    let docs =  await getLivrosColocarEvBetweenIds(1568849,1999999, config.maxItems)
-
-
+    let docs =  await getLivrosColocarEvBetweenIds(1568849,9999999, config.maxItems)
     log({robot:'cadastrar-livros', log: `Buscado no banco ${docs.length} para cadastro`})
 
+    // docs retornados do banco
     if(!docs) return ;
     console.log(`Cadastrando batch de ${docs.length} livros.. `)     
     let n=0;
 
-    // abre driver em profile diferente
+    // abre driver em profile específico (config)
     driver({
         'profile': config.chromeProfilePath,
         'headless': config.browserHeadless
     })
 
+    // random order.. caso um trave não vai travar pra sempre
     if(config.shuffleOrder){
         docs.sort( () => .5 - Math.random() );
     }
+
+    // prioriza os que não deram erro previamente
     docs.sort( (a,b) => {
         if(b.errorsCadastro && a.errorsCadastro) return a.errorsCadastro - b.errorsCadastro
         return b.errorsCadastro? -1 : 1 
     })
 
+    // cadastro do batch inteiro
     log({robot:'cadastrar-livros', log: `Iniciando cadastro`})
     for(let doc of docs){
         console.log(`livro (${++n}): ${doc.id} `)     
+
+        // testa se o driver está aberto tentando pegar a url
         try {
             currentUrl()
         } catch (error) {
             console.log('Something went wrong... closing driver')
             closeDriver()
-        }        
+        }
 
+        // testa condições pra ignorar
+        // se não precisar ignorar, faz o cadastro do livro com o doc dele
         if (testConditionsToIgnore(doc,config)){
             console.log('Livro nao cadastrado ... Ignorado por causa das regras!')                
         } else {
             let ok = await cadastraDoc(doc)
             if(!ok) console.log('Livro nao cadastrado ... Ocorreu um erro!')    
         }
-
     }
     log({robot:'cadastrar-livros', log: `Finalizando cadastro`})
 }
@@ -203,7 +222,7 @@ async function startHandler(config){
 
 
 
-
+// configurações default, caso o banco não exista etc
 var defaultConfig = {
     _id: 'config-robots-ev',
     _rev: '1-0c1fe6ff18a2b33167d1043ac11435ae',
@@ -225,20 +244,15 @@ var defaultConfig = {
     }
 }
 
-function isProd(){
-    return config.salvarLivros || config.salvarLivros===undefined
-}
-
-
+// configurações do banco
 let configImported = await getConfig()
 let config = {...defaultConfig, ...configImported}
 config = config.cadastrar
 
 
+// Roda o handler de cadastro
 log({robot:'cadastrar-livros', log: 'Iniciando handler'})
-
 await startHandler(config)
-
 log({robot:'cadastrar-livros', log: 'Finalizando operação'})
 
 

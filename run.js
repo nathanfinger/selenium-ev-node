@@ -1,18 +1,6 @@
-import {
-    log,
-    evBuscaById,
-    clickOnSelector,
-    acceptAlert,
-    sleep,
-    closeDriver,
-    countElements,
-    currentUrl,
-    driver
-} from './common.js'
-
-import {getConfig, countLivrosWithoutProperty, getLivroWithoutProperty, setPropertyOnDoc} from './db.js'
-import {getLivrosNaoDisponiveisWithProperty, getLivrosWithProperty as l_getLivrosWithProperty, setPropertyOnDoc as l_setPropertyOnDoc} from "./db_livros.js";
-
+import {log,evBuscaById,clickOnSelector,acceptAlert,sleep,closeDriver,countElements,currentUrl,driver} from './common.js'
+import {getConfig, getLivroWithoutProperty, setPropertyOnDoc} from './db.js'
+import {getLivrosNaoDisponiveisWithProperty, setPropertyOnDoc as l_setPropertyOnDoc} from "./db_livros.js";
 
 
 
@@ -40,6 +28,9 @@ async function removeVendidoFromEv(livro) {
     }
 
 }
+
+
+// remove livro fora do status 4 da EV e atualiza propriedades
 async function removeIndisponivelFromEv(livro) {
     await evBuscaById(livro.id)
 
@@ -69,13 +60,11 @@ async function removeIndisponivelFromEv(livro) {
 
 
 
-
-
-
-
-
-async function startHandler(n= 1,maxN= 10){
+// handler de remoção dos livros
+async function startHandler(n=1, maxN=30){
     let nothing = false
+
+    // se chegou ao máximo do batch, parar o robot (decisão legada)
     if(n>maxN){
         console.log('maxN reached')
         closeDriver()
@@ -83,6 +72,7 @@ async function startHandler(n= 1,maxN= 10){
     }
     console.log(`handler ${n} / ${maxN}`)
 
+    // busca por livro que ainda não foi removido
     let livro = await getLivroWithoutProperty(config.propRemovido)
     if (livro.length===0) {
         nothing = true
@@ -94,6 +84,7 @@ async function startHandler(n= 1,maxN= 10){
     }
 
 
+    // procura livros não disponiveis com colocadoEv=true
     let retirarEv = await getLivrosNaoDisponiveisWithProperty(config.propColocado,true)
     if (nothing && retirarEv.length===0) {
         console.log('Nada a retirar..')
@@ -116,12 +107,7 @@ async function startHandler(n= 1,maxN= 10){
 
 
 
-
-
-
-
-
-
+// confogurações default, para caso não carregue do banco
 var defaultConfig = {
     _id: 'config-robots-ev',
     _rev: '1-0c1fe6ff18a2b33167d1043ac11435ae',
@@ -135,21 +121,25 @@ var defaultConfig = {
       }
 }
 
+// carrega configurações do banco
 let configImported = await getConfig()
 let config = {...defaultConfig, ...configImported}
 config = config.remover
+
+// legacy queue 
 let queue_max = config.queue_max
 
 
 
+// inicia handler
 log({robot:'run', log: `Iniciando handler`})
 try {
-    // abre driver em profile diferente
+    // abre driver em profile específico (config)
     driver({
         'profile': config.chromeProfilePath,
         'headless': config.browserHeadless
     })
-
+    // Starta o handler recursivo
     await startHandler(1, queue_max)
     console.log('All Done..')
     await sleep(5)

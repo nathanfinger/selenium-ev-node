@@ -1,10 +1,4 @@
-import {
-    log,
-    sleep,
-    closeDriver,
-    evPgPedido,
-    evSetTrackingCode, evPgVendasStandyBy, evPgVendasDelayed, evListaPedidos
-} from './common.js'
+import {log,sleep,closeDriver,evPgPedido,evSetTrackingCode, evPgVendasStandyBy, evPgVendasDelayed, evListaPedidos} from './common.js'
 import {getTableDocWithProperty} from './db.js'
 
 
@@ -19,7 +13,6 @@ const rastreioNoPedidoEv = async function (id_ev,codigo_rastreio, save=true){
         closeDriver()
     }
 }
-
 
 
 const startHandler = async ()=>{

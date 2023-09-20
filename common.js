@@ -180,9 +180,6 @@ export const evBuscaById = async(idSearch) =>{
 }
 
 
-
-
-
 export const idFromText = text=>{
     return text.match(/ID \d+/g)[0].replace('ID ','')
 }
@@ -308,7 +305,6 @@ export const evSetTrackingCode = async function (code,save=false) {
         await clickOnSelector('#tracking_code_btn')
     }
 }
-
 
 export const currentUrl = async function(){
     return await driver().getCurrentUrl()
