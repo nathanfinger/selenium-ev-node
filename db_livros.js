@@ -40,7 +40,7 @@ export async function setPropertyOnDoc(docData, propertyName, propertyValue, tab
         doc[propertyName] = propertyValue;
 
         await instance.put(endpoint, doc);
-        console.log(`Book ${docData.id_livro || docData.id || docData._id} updated successfully with ${propertyName} -> ${propertyValue} `);
+        console.log(` ✔️  Book ${docData.id_livro || docData.id || docData._id} updated successfully with ${propertyName} -> ${propertyValue} `);
     } catch (error) {
         console.error(error);
     }
@@ -131,7 +131,7 @@ export async function getLivrosColocarCapa(limit=999){
 }
 
 
-export async function getLivrosColocarEv(limit=999999) {
+export async function getLivrosColocarEv_v1(limit=999) {
     const endpoint = `/${'livros_amz'}/_find`;
     const requestBody = {
         selector: {
@@ -156,6 +156,7 @@ export async function getLivrosColocarEv(limit=999999) {
     }
 
 }
+
 
 export async function getLivrosNaoDisponiveisWithProperty(propertyName='status', propertyValue=4, limit=999999) {
     const endpoint = `/${'livros_amz'}/_find`;
@@ -193,9 +194,6 @@ export async function getCapaById(id){
     console.log(`Registros encontrados = ${docs.length}`)
 
     if (docs.length === 0) return false
-    // TODO confere se capa existe e formato
-    // let nome = docs[0]._id+'.jpg'
-
 
     // se não existe capa tem que fazer download da capa padrão do 'sem capa'
     if(!docs[0]._attachments){
@@ -204,7 +202,7 @@ export async function getCapaById(id){
     }
 
     let nome = 'capa.jpg'
-    console.log(`tentando baixar a capa (${nome}) do doc (${docs[0]._id}) `)
+    console.log(` ⬇️ Baixando capa padrão (${nome}) do Banco... `)
     let capa = await getAttachment('livros_amz', docs[0]._id, nome)
     return capa
 }
@@ -212,7 +210,7 @@ export async function getCapaById(id){
 export async function getCapaByDoc(doc){
     // TODO confere se capa existe e formato
     let nome = 'capa.jpg'
-    console.log(`tentando baixar a capa (${nome}) do doc (${doc._id}) `)
+    console.log(` ⬇️ Baixando a capa (${nome}) do Banco... `)
     let capa = await getAttachment('livros_amz', doc._id, nome)
     return capa
 }
@@ -275,3 +273,33 @@ export const saveErroCadastro = async function (doc, errors){
 
     await updateOrSaveDoc(doc, table)
 }
+
+
+
+
+export async function getFromLivrosView(limit = 200, databaseName='livros_amz', designDocumentName='cadastrosEv', livros_view = 'a-retirar-ev', sortField='id', sortType='asc') {
+    let endpoint = `/${databaseName}/_design/${designDocumentName}/_view/${livros_view}`;
+      const queryParameters = {
+      limit: limit,
+      include_docs: true,
+      sort: [
+        {[sortField]: sortType},
+    ]
+    };
+   
+    try {
+        const response = await instance.get(endpoint, { params: queryParameters });
+        return response.data.rows.map(row => row.doc);
+      } catch (error) {
+        console.error(error);
+        return [];
+      }
+
+  }
+  
+
+
+  export async function getLivrosColocarEv(limit=999) {
+    return await getFromLivrosView(limit, 'livros_amz', 'cadastrosEv', 'a-colocar-ev', 'id', 'asc')
+    }
+

@@ -1,107 +1,68 @@
 import {log,evBuscaById,clickOnSelector,acceptAlert,sleep,closeDriver,countElements,currentUrl,driver} from './common.js'
-import {getConfig, getLivroWithoutProperty, setPropertyOnDoc} from './db.js'
-import {getLivrosNaoDisponiveisWithProperty, setPropertyOnDoc as l_setPropertyOnDoc} from "./db_livros.js";
+import {getConfig} from './db.js'
+import {getFromLivrosView, setPropertyOnDoc} from "./db_livros.js";
 
-
-
-async function removeVendidoFromEv(livro) {
-    await evBuscaById(livro.id_livro)
-
-    let count = await countElements(`.acervo-item`)
-    console.log(`Itens encontrados: ${count}`)
-    if(count>0){
-        await clickOnSelector('.acervo-item')
-        await clickOnSelector('.action-checked')
-        await sleep(0.5)
-
-        await acceptAlert()
-        await setPropertyOnDoc(livro,'removedFromEv',true)
-        return true
-    }
-    while ((await currentUrl()).includes('login')){
-        await sleep(20)
-    }
-    if(count===0 && !(await currentUrl()).includes('login')){
-        await setPropertyOnDoc(livro,'removedFromEv',true)
-        await setPropertyOnDoc(livro,'alreadyRemovedFromEv',true)
-        return true
-    }
-
-}
 
 
 // remove livro fora do status 4 da EV e atualiza propriedades
 async function removeIndisponivelFromEv(livro) {
+
+    // busca um livro no acervo
     await evBuscaById(livro.id)
 
+    // se pediu login, para
+    while ((await currentUrl()).includes('login')){
+        console.log('Browser might be asking for login credentials')
+        await sleep(20)
+    }
+
+    // procura os resultados  
     let count = await countElements(`.acervo-item`)
     console.log(`Itens encontrados: ${count}`)
+
+
+    // se encontrou resultados, retira os livros e marca como retirado
     if(count>0){
         await clickOnSelector('.acervo-item')
         await clickOnSelector('.action-checked')
         await sleep(0.5)
 
         await acceptAlert()
-        await l_setPropertyOnDoc(livro,'removedFromEv',true)
-        await l_setPropertyOnDoc(livro,'colocadoEv',false)
-        return true
-    }
-    while ((await currentUrl()).includes('login')){
-        await sleep(20)
-    }
-    if(count===0 && !(await currentUrl()).includes('login')){
-        await l_setPropertyOnDoc(livro,'removedFromEv',true)
-        await l_setPropertyOnDoc(livro,'alreadyRemovedFromEv',true)
-        await l_setPropertyOnDoc(livro,'colocadoEv',false)
+        await setPropertyOnDoc(livro,'removedFromEv',true)
+        await setPropertyOnDoc(livro,'colocadoEv',false)
+        log({robot:'run', log: `Livro ${livro.id} removido da EV, atualizando cadastro.`})
+
         return true
     }
 
+    // se não encontrou resultados, marca como retirado
+    if(count===0 && !(await currentUrl()).includes('login')){
+        await setPropertyOnDoc(livro,'removedFromEv',true)
+        await setPropertyOnDoc(livro,'alreadyRemovedFromEv',true)
+        await setPropertyOnDoc(livro,'colocadoEv',false)
+        log({robot:'run', log: `Livro ${livro.id} não encontrado na EV, atualizando cadastro.`})
+
+        return true
+    }
 }
 
 
 
 // handler de remoção dos livros
-async function startHandler(n=1, maxN=30){
-    let nothing = false
+async function startHandler(docs){
+    let counter = 0
 
-    // se chegou ao máximo do batch, parar o robot (decisão legada)
-    if(n>maxN){
-        console.log('maxN reached')
-        closeDriver()
-        return true;
-    }
-    console.log(`handler ${n} / ${maxN}`)
-
-    // busca por livro que ainda não foi removido
-    let livro = await getLivroWithoutProperty(config.propRemovido)
-    if (livro.length===0) {
-        nothing = true
-    } else {
-        console.log(`Retirando o livros da EV que passou pela expedição: ${livro[0].id_livro}`)
-        await sleep(1)
-        await removeVendidoFromEv(livro[0])
-        return startHandler(n+1, maxN)
+    // tem livros pra remover?
+    if(docs.length<1) {
+        conosole.log('nada a remover')    
+        return ;
     }
 
-
-    // procura livros não disponiveis com colocadoEv=true
-    let retirarEv = await getLivrosNaoDisponiveisWithProperty(config.propColocado,true)
-    if (nothing && retirarEv.length===0) {
-        console.log('Nada a retirar..')
-        closeDriver()
-        log({robot:'run', log: `Sem mais livros para remover`})
-        return 'Sem livros para remover';
-    } else {
-        log({robot:'run', log: `Retirando agora os livros da EV que não estão no status 4...`})
-
-        for (let book of retirarEv){
-            console.log(`Starting removal of id: ${book.id}`)
-            await sleep(1)
-            await removeIndisponivelFromEv(book)
-            log({robot:'run', log: `Removido o livro de id: ${book.id}`})
-        }
+    // else ... remove cada um 
+    for (let doc of docs){
+        console.log(` --> Iniciando Remoção do livro de id = ${doc.id} (${++counter} / ${docs.length})`)
+        await removeIndisponivelFromEv(doc)
     }
-    await startHandler(n+1, maxN)
 }
 
 
@@ -117,8 +78,9 @@ var defaultConfig = {
         chromeProfilePath: "./profiles/chrome1",
         shuffleOrder: true,
         propRemovido: "removidoEv",
-        queue_max:1000
-      }
+        queue_max:1000,
+        batchSize:200
+    }
 }
 
 // carrega configurações do banco
@@ -126,12 +88,15 @@ let configImported = await getConfig()
 let config = {...defaultConfig, ...configImported}
 config = config.remover
 
-// legacy queue 
-let queue_max = config.queue_max
 
 
 
-// inicia handler
+
+// pega livros
+let docs = await getFromLivrosView(config.batchSize)
+
+
+// inicia handler   
 log({robot:'run', log: `Iniciando handler`})
 try {
     // abre driver em profile específico (config)
@@ -139,8 +104,9 @@ try {
         'profile': config.chromeProfilePath,
         'headless': config.browserHeadless
     })
+
     // Starta o handler recursivo
-    await startHandler(1, queue_max)
+    await startHandler(docs)
     console.log('All Done..')
     await sleep(5)
     closeDriver()

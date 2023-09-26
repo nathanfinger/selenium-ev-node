@@ -75,17 +75,14 @@ node run.js
 ```
 
 ### Funcionamento
-Lê do banco via funções do db.js e db_livros.js os livros a serem removidos da EV
-1) Vai procurar por docs/livros fora do status disponível (4) com 'colocadoEv'
-1.1) Vai ignorar os docs/livros com a propriedade [propRemovido] (removedFromEv by default)
-2) Vai procurar sem removedFromEv, que já passaram pelo checkout
+Lê do banco via funções do db_livros.js os livros a serem removidos da EV 
+1) Vai procurar por docs/livros de uma view específica
+2) As regras de seleção estão por conta da view.
 Após remover o robô coloca uma propriedade 'removedFromEv' : true
 Após tentar remover livro removido o robô coloca uma propriedade 'alreadyRemovedFromEv' : true
 Se removido, vai alterar 'colocadoEv' pra false.
 
-Para alterar os livros a serem retirados:
-Para status geral: ver 'getLivrosNaoDisponiveisWithProperty'
-Os que passaram pelo checkout: 'getLivroWithoutProperty'
+Para alterar os livros a serem retirados, modificar a view do DB.
 
 
 ## Colocando rastreio

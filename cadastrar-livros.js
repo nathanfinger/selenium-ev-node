@@ -1,7 +1,6 @@
 import {getProperties, log, driver, closeDriver, clickOnSelector, evPgCadastro, sendKeysToInput, sleep, currentUrl} from "./common.js";
-import {getLivrosColocarEvBetweenIds, getCapaByDoc, setPropertyOnDoc, saveErroCadastro} from "./db_livros.js";
+import {getLivrosColocarEvBetweenIds, getLivrosColocarEv, getCapaByDoc, setPropertyOnDoc, saveErroCadastro} from "./db_livros.js";
 import {getConfig} from "./db.js";
-
 import {resolve} from 'path'
 import fs from 'fs'
 
@@ -32,8 +31,8 @@ const evSelectors = {
     location_in_store: '#form_location_in_store',
 }
 
-const preencheForm = async (doc,pathImg) => {
 
+const preencheForm = async (doc,pathImg) => {
     // seta os campos todos
     let isbn = doc.isbnEv || doc.isbn || ''
     let estante = doc.assuntoEv || doc.assunto
@@ -46,11 +45,10 @@ const preencheForm = async (doc,pathImg) => {
     let descricao = doc.obsEstadoConservacao
     let capa = pathImg || ''
 
-
     // padrão da EV: editora em lowercase
     estante = estante.split('.')[0]
-    editora = editora.replace('editora ','').replace(' editora','').replace('editora','')
     editora = editora.toLowerCase()
+    editora = editora.replace('editora ','').replace(' editora','').replace('editora','')
 
     // preço mínimo para a EV
     let precoMin = 9.901
@@ -67,7 +65,6 @@ const preencheForm = async (doc,pathImg) => {
 
     // Caso sem autor
     if(!autor) autor = 'Equipe Editorial';
-
     
     await sendKeysToInput(evSelectors['estante'], 'outr')
     await sendKeysToInput(evSelectors['isbn'], isbn)
@@ -83,14 +80,13 @@ const preencheForm = async (doc,pathImg) => {
 
     // artifício para testes
     if(isProd()) {
-        console.log('...salvando...')
+        console.log(' ✔️  salvando   ')
         await clickOnSelector('.btn-add-acervo')       
     }
 
     // pra não depender exclusivamente do selenium, vou esperar um tempo
     let waitx = config.esperarSegundosAposSalvar || 5
     await sleep(waitx)
-
 
     // testa se a URL ocntinua a mesma (falha)
     // se encontrar erros registra
@@ -102,16 +98,12 @@ const preencheForm = async (doc,pathImg) => {
     }
 }
 
-
 // download da capa, dado o doc
 async function downloadCapa(doc, path='./img_cadastro.jpg'){
     let capa = await getCapaByDoc(doc);   
     await fs.promises.writeFile(path, capa.data);
-    console.log('File saved successfully:', path);
+    console.log(' ⬇️ File saved successfully:', path);
 }
-
-
-
 
 async function cadastraDoc(doc){
     let path = './img_cadastro.jpg';
@@ -124,12 +116,19 @@ async function cadastraDoc(doc){
         await preencheForm(doc, path)
         await sleep(0.5)    
     } catch (error) {
-        console.log('erro no cadastro do livro')
+        log({robot:'cadastrar-livros', log:`erro no cadastro do livro ${doc.id}`})
         console.log(error)
         return false
     }
 
-    if(isProd()) await setPropertyOnDoc(doc,'colocadoEv',true)
+    if(isProd()) {
+        await setPropertyOnDoc(doc,'colocadoEv',true)
+        await setPropertyOnDoc(doc,'removedFromEv',false)
+        await setPropertyOnDoc(doc,'alreadyRemovedFromEv',false)
+    }
+
+    log({robot:'cadastrar-livros', log:`Livro cadastrado na EV ${doc.id}`})
+
     return true
 }
 
@@ -137,10 +136,10 @@ async function cadastraDoc(doc){
 
 // algumas condições setadas nas configurações, pra ignorar o cadastro
 function testConditionsToIgnore(doc,config){
-
-    // rodando 'manualmente' num range sem essa prop (com a getLivrosColocarEvBetweenIds)
-    // depois de estável trocar pela getLivrosColocarEv e ativar essa condição
-    // if(!doc[config.propCadastrar]) return true ;
+    // rodar 'manualmente' num range:  getLivrosColocarEvBetweenIds
+    // Modo estável: getLivrosColocarEv
+    // tirar essa condição pra cadastrar range manual
+    if(!doc[config.propCadastrar]) return true ;
 
     // valida doc.id
     if(doc.id > config.ignoraIdMaiorQue ) return true ;
@@ -161,20 +160,20 @@ function testConditionsToIgnore(doc,config){
 }
 
 
-
-
-
 async function startHandler(config){   
     console.log('Buscando livros no banco')
 
-    // rodando inicialmente 'manualmente' num range, depois trocar por essa getLivrosColocarEv
-    // let docs = await getLivrosColocarEv(50)
-    let docs =  await getLivrosColocarEvBetweenIds(1568849,9999999, config.maxItems)
-    log({robot:'cadastrar-livros', log: `Buscado no banco ${docs.length} para cadastro`})
+    // rodar 'manualmente' num range:  getLivrosColocarEvBetweenIds
+    // Modo estável: getLivrosColocarEv
+    // let docs =  await getLivrosColocarEvBetweenIds(1568849,9999999, config.maxItems)
+    let docs = await getLivrosColocarEv(config.maxItems)
+
+    log({robot:'cadastrar-livros', log: `Buscado no banco ${docs.length} para cadastro. Muitos devem ser ignorados pelas regras`})
 
     // docs retornados do banco
     if(!docs) return ;
-    console.log(`Cadastrando batch de ${docs.length} livros.. `)     
+    log({robot:'cadastrar-livros', log: `Cadastrando batch de ${docs.length} livros.. `})
+
     let n=0;
 
     // abre driver em profile específico (config)
@@ -197,7 +196,7 @@ async function startHandler(config){
     // cadastro do batch inteiro
     log({robot:'cadastrar-livros', log: `Iniciando cadastro`})
     for(let doc of docs){
-        console.log(`livro (${++n}): ${doc.id} `)     
+        console.log(`✉️  livro (${++n} / ${docs.length}): ${doc.id} `)     
 
         // testa se o driver está aberto tentando pegar a url
         try {
@@ -210,10 +209,10 @@ async function startHandler(config){
         // testa condições pra ignorar
         // se não precisar ignorar, faz o cadastro do livro com o doc dele
         if (testConditionsToIgnore(doc,config)){
-            console.log('Livro nao cadastrado ... Ignorado por causa das regras!')                
+            console.log(' ☠️   Livro nao cadastrado ... Ignorado por causa das regras!')                
         } else {
             let ok = await cadastraDoc(doc)
-            if(!ok) console.log('Livro nao cadastrado ... Ocorreu um erro!')    
+            if(!ok) console.log(' ☠️   Livro nao cadastrado ... Ocorreu um erro!')    
         }
     }
     log({robot:'cadastrar-livros', log: `Finalizando cadastro`})

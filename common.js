@@ -1,8 +1,10 @@
 import { Builder, By, until } from 'selenium-webdriver';
 import chrome from 'selenium-webdriver/chrome.js'
+import { promises as fsPromises } from 'fs';
 
 let _driver = null;
 let profileDirectory='./profiles/chrome1'
+export var driverIsOpen = false;
 
 export const driver = (opts) => {
     if(_driver) return _driver;
@@ -25,6 +27,7 @@ export const driver = (opts) => {
         .setChromeOptions(options)
         .build();
     console.log(options)
+    driverIsOpen = true;
     return _driver;
 }
 
@@ -63,6 +66,7 @@ export const waitUntilEnabled = async(selector) => {
 
 
 export const waitAlert = async() => {
+    console.log('Waiting for alert')
     return await driver().wait(until.alertIsPresent(), 10000)
 }
 
@@ -78,7 +82,7 @@ export const get = async(url) => {
 }
 
 export const sleep = async(seconds) => {
-    console.log(`Sleeping for ${seconds} seconds`)
+    console.log(` 😴 Sleeping for ${seconds} seconds`)
     return new Promise((resolve) => {
         setTimeout(() => {
             resolve()
@@ -87,15 +91,15 @@ export const sleep = async(seconds) => {
 }
 
 export const clickOnSelector = async(selector) =>{
-    console.log(`Waiting to click on: ${selector}`);
+    console.log(` 😴 Waiting to click on: ${selector}`);
     (await waitFor(selector)).click()
-    console.log(`Clicked on: ${selector}`);
+    console.log(` Clicked on: ${selector}`);
 }
 
 
 export const sendKeysToInput = async (selector, keys) => {
     try {
-        console.log(`Sending Keys '${keys}' to input`);
+        console.log(` ⌨️   Sending Keys (${keys}) to input (${selector})`);
         const inputElement = await waitFor(selector);
         await inputElement.sendKeys(keys);
     } catch (error) {
@@ -104,6 +108,7 @@ export const sendKeysToInput = async (selector, keys) => {
 };
 
 export const acceptAlert = async () => {
+    console.log('accepting alert')
     await sleep(1);
     try {
         console.log(`Accepting alert`);
@@ -118,8 +123,10 @@ export const acceptAlert = async () => {
 };
 
 export const closeDriver = async () =>{
-    if (_driver === null) return ''
+    if(_driver === null || driverIsOpen===false) return ;
+
     console.log(`Closing driver`);
+    driverIsOpen = false;
     try {
         driver().close()
     } catch (e) {
@@ -196,7 +203,6 @@ export const evPgCadastro = async() =>{
 }
 export const evPgVendas = async(pagina=1) =>{
     console.log(`Getting sales page: ${''}`);
-
     // ultimos 100 pedidos
     const urlVendas = `https://livreiro.estantevirtual.com.br/vendas/?termo=&periodo=total&status=total&forma_pagamento=todas&carrier=&envio=&rows_per_page=100&pagina=${pagina}`
     await get(urlVendas)
@@ -214,6 +220,15 @@ export const evPgVendasDelayed = async() =>{
     const urlVendas = 'https://livreiro.estantevirtual.com.br/vendas/?termo=&periodo=total&status=delayed&forma_pagamento=todas&carrier=&envio=&rows_per_page=100'
     await get(urlVendas)
 }
+export const evPgVendasCancelled = async() =>{
+    console.log(`Getting sales page: ${''} ... status delayed 'atrasado'`);
+    // apenas aguardando envio
+    const urlVendas = 'https://livreiro.estantevirtual.com.br/vendas?termo=&periodo=total&status=canceled&forma_pagamento=todas&carrier=&envio=&rows_per_page=30'
+    await get(urlVendas)
+}
+
+
+
 
 
 export const tryMatch = function(str,patt,replcomma=true,index=0){
@@ -231,7 +246,7 @@ export const tryMatch = function(str,patt,replcomma=true,index=0){
 export const evPegaInfosPedido = async(idPedidoEv) => {
 
     await evPgPedido(''+idPedidoEv)
-    await sleep(4)
+    await sleep(1)
 
     const data = new Date()
     const pedido = ''+idPedidoEv
@@ -312,6 +327,7 @@ export const currentUrl = async function(){
 
 export const log = async function(obj){
     console.log(`${obj.robot} - ${obj.log}`)
+    appendLogToFile(obj.robot,obj.log)
 }
 
 
@@ -320,5 +336,19 @@ export const zulip_session_bot = {
     key: 'WKb7t9zcFaDDoeozm27ewD1GFfrqei3d'
 }
 
+
+async function appendLogToFile(category, log) {
+    const logDirectory = './logs';  
+    try {
+      await fsPromises.mkdir(logDirectory, { recursive: true });
+      const filePath = logDirectory + `/${category}.log`
+      const timestamp = new Date().toLocaleString();
+      const logEntry = `${timestamp}: ${log}\n`;
+      await fsPromises.appendFile(filePath, logEntry);
+    } catch (err) {
+        console.error(`Error appending log to ${category}.log: ${err}`);
+        console.error(`Error appending log to ${category}.log: ${err}`);
+    }
+  }
 
 
