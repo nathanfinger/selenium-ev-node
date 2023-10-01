@@ -14,6 +14,7 @@ function isProd(){
 
 // DICIONÁRIO DE SELETORES PRO CADASTRO
 const evSelectors = {
+    capa: '#form_capa',
     error: '.error',
     isbn: '#form_isbn',
     barcode: '#form_barcode',
@@ -94,7 +95,7 @@ const preencheForm = async (doc,pathImg) => {
     if(url.includes('/acervo/editar')){
         let errors = await getProperties(evSelectors['error'], 'innerHTML')
         await saveErroCadastro(doc, errors)
-        throw new Error('Ocorreu algum erro inesperado nos dados de cadastro do livro');
+        throw new Error('Disparando um erro -> Ocorreu algum erro inesperado nos dados de cadastro do livro');
     }
 }
 
@@ -122,9 +123,7 @@ async function cadastraDoc(doc){
     }
 
     if(isProd()) {
-        await setPropertyOnDoc(doc,'colocadoEv',true)
-        await setPropertyOnDoc(doc,'removedFromEv',false)
-        await setPropertyOnDoc(doc,'alreadyRemovedFromEv',false)
+        await setPropertyOnDoc(doc,['colocadoEv','removedFromEv','alreadyRemovedFromEv'],[true,false,false])
     }
 
     log({robot:'cadastrar-livros', log:`Livro cadastrado na EV ${doc.id}`})

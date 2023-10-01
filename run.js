@@ -54,7 +54,7 @@ async function startHandler(docs){
 
     // tem livros pra remover?
     if(docs.length<1) {
-        conosole.log('nada a remover')    
+        console.log('nada a remover')    
         return ;
     }
 

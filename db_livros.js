@@ -1,7 +1,7 @@
 import axios from "axios";
 import {db_livros} from './config.mjs'
 
-const instance = axios.create({
+export const instance = axios.create({
     baseURL: `${db_livros.base_url}:${db_livros.port}`,
     auth: {
         username: db_livros.user,
@@ -9,6 +9,44 @@ const instance = axios.create({
     }
 });
 
+
+export async function saveDoc(data, table) {
+    const endpoint = `/${table}`;
+    try {
+        const response = await instance.post(endpoint, data);
+        console.log('Document saved successfully:', response.data);
+    } catch (error) {
+        console.error('An error occurred while saving the document:', error);
+    }
+}
+
+export async function updateOrSaveDoc(data, table='livros_amz',prop='id',value='') {
+    value = value ? value : data.id
+    const endpoint = `/${table}/_find`;
+    const requestBody = {
+        selector: {
+            [prop]: value,
+        },
+    };
+
+    try {
+        const response = await instance.post(endpoint, requestBody);
+        const existingDoc = response.data.docs[0];
+
+        if (existingDoc) {
+            // Document with matching id found, update it with additional data
+            const updatedDoc = { ...existingDoc, ...data };
+            await saveDoc(updatedDoc, table);
+            console.log('Document updated successfully:', updatedDoc);
+        } else {
+            // Document with matching id not found, save a new document
+            await saveDoc(data, table);
+            console.log('New document saved successfully:', data);
+        }
+    } catch (error) {
+        console.error('An error occurred while updating or saving the document:', error);
+    }
+}
 
 export async function getDoc(endpoint, requestBody){
     try {
@@ -25,7 +63,7 @@ export async function postDocs(endpoint, requestBody){
         const response = await instance.post(endpoint, requestBody);
         return response.data.docs;
     } catch (error) {
-        console.error(error);
+        console.error('error on postDocs: ', error);
         return []
     }
 }
@@ -37,12 +75,17 @@ export async function setPropertyOnDoc(docData, propertyName, propertyValue, tab
         const response = await instance.get(endpoint);
         const doc = response.data;
 
-        doc[propertyName] = propertyValue;
+        if(typeof(propertyName)==='string') {
+            doc[propertyName] = propertyValue 
+        } else {
+            propertyName.forEach((e,i)=>{doc[propertyName[i]] = propertyValue[i]})
+        }
+        
 
         await instance.put(endpoint, doc);
         console.log(` ✔️  Book ${docData.id_livro || docData.id || docData._id} updated successfully with ${propertyName} -> ${propertyValue} `);
     } catch (error) {
-        console.error(error);
+        console.error('error on setPropertyOnDoc: ', error);
     }
 }
 
@@ -268,10 +311,7 @@ export const saveErroCadastro = async function (doc, errors){
         errorsCadastro = doc.errorsCadastro = 1
     }
 
-    await setPropertyOnDoc(doc, 'cadastroEvErros', errors)
-    await setPropertyOnDoc(doc, 'errorsCadastro', errorsCadastro)
-
-    await updateOrSaveDoc(doc, table)
+    await setPropertyOnDoc(doc, ['cadastroEvErros','errorsCadastro'], [errors,errorsCadastro])
 }
 
 
@@ -303,3 +343,17 @@ export async function getFromLivrosView(limit = 200, databaseName='livros_amz', 
     return await getFromLivrosView(limit, 'livros_amz', 'cadastrosEv', 'a-colocar-ev', 'id', 'asc')
     }
 
+
+
+
+
+export async function getDocLivroById(id) {
+    const endpoint = `/livros_amz/${''+id}`
+    try {
+        let doc = await instance.get(endpoint)
+        return doc.data
+    } catch (error) {
+    //   console.error('Error retrieving document:', error);
+      return {}
+    }
+  }
